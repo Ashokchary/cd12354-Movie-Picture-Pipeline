@@ -1,14 +1,13 @@
-name: Frontend CI
+name: Frontend Continuous Integration
 
 on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'starter/frontend/**'
   workflow_dispatch:
 
 jobs:
+
   lint:
     runs-on: ubuntu-latest
 
@@ -16,20 +15,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          node-version-file: 'starter/frontend/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: 'starter/frontend/package-lock.json'
+          node-version: 18
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install dependencies
-        working-directory: starter/frontend
-        run: npm ci
+        working-directory: ./frontend
+        run: npm install
 
       - name: Run lint
-        working-directory: starter/frontend
+        working-directory: ./frontend
         run: npm run lint
+
 
   test:
     runs-on: ubuntu-latest
@@ -38,42 +44,56 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          node-version-file: 'starter/frontend/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: 'starter/frontend/package-lock.json'
+          node-version: 18
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install dependencies
-        working-directory: starter/frontend
-        run: npm ci
+        working-directory: ./frontend
+        run: npm install
 
       - name: Run tests
-        working-directory: starter/frontend
-        run: CI=true npm test -- --watchAll=false
+        working-directory: ./frontend
+        run: npm run test
 
-  build:
-    needs:
-      - lint
-      - test
+
+  build-job:
+    needs: [lint, test]
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          node-version-file: 'starter/frontend/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: 'starter/frontend/package-lock.json'
+          node-version: 18
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install dependencies
-        working-directory: starter/frontend
-        run: npm ci
+        working-directory: ./frontend
+        run: npm install
 
-      - name: Build application
-        working-directory: starter/frontend
-        run: npm run build
+      - name: Run tests
+        working-directory: ./frontend
+        run: npm run test
+
+      - name: Build Docker image
+        run: docker build -t frontend ./frontend
